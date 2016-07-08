@@ -13,8 +13,8 @@
 package com.yuntongxun.ecdemo.ui.chatting.model;
 
 import android.content.Context;
+import android.text.TextUtils;
 import android.text.method.LinkMovementMethod;
-import android.text.util.Linkify;
 import android.view.ContextMenu;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -23,10 +23,15 @@ import com.yuntongxun.ecdemo.R;
 import com.yuntongxun.ecdemo.ui.chatting.ChattingActivity;
 import com.yuntongxun.ecdemo.ui.chatting.holder.BaseHolder;
 import com.yuntongxun.ecdemo.ui.chatting.holder.DescriptionViewHolder;
+import com.yuntongxun.ecdemo.ui.chatting.view.CCPChattingFooter2;
 import com.yuntongxun.ecdemo.ui.chatting.view.ChattingItemContainer;
 import com.yuntongxun.ecsdk.ECMessage;
-import com.yuntongxun.ecsdk.im.ECTextMessageBody;
 import com.yuntongxun.ecsdk.im.ECCallMessageBody;
+import com.yuntongxun.ecsdk.im.ECTextMessageBody;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 
 /**
@@ -40,49 +45,64 @@ import com.yuntongxun.ecsdk.im.ECCallMessageBody;
  */
 public class DescriptionRxRow extends BaseChattingRow {
 
-	
+
 	public DescriptionRxRow(int type){
 		super(type);
 	}
-	
+
 	@Override
 	public View buildChatView(LayoutInflater inflater, View convertView) {
         //we have a don't have a converView so we'll have to create a new one
         if (convertView == null ) {
             convertView = new ChattingItemContainer(inflater, R.layout.chatting_item_from);
 
-            
+
             //use the view holder pattern to save of already looked up subviews
             DescriptionViewHolder holder = new DescriptionViewHolder(mRowType);
             convertView.setTag(holder.initBaseHolder(convertView, true));
-        } 
+        }
 		return convertView;
 	}
 
 	@Override
 	public void buildChattingData(final Context context, BaseHolder baseHolder,
 			ECMessage detail, int position) {
-		
+
 		DescriptionViewHolder holder = (DescriptionViewHolder) baseHolder;
 		ECMessage message = detail;
-		if(message != null) {
+			if(message != null) {
+				if (message.getType() == ECMessage.Type.TXT) {
+					String msgType="";
+					JSONArray jsonArray=null;
+					if (!TextUtils.isEmpty(message.getUserData())) try {
+						JSONObject jsonObject = new JSONObject(message.getUserData());
+						msgType = jsonObject.getString(CCPChattingFooter2.TXT_MSGTYPE);
+						jsonArray = jsonObject.getJSONArray(CCPChattingFooter2.MSG_DATA);
 
-			if(message.getType()== ECMessage.Type.TXT) {
-				ECTextMessageBody textBody = (ECTextMessageBody) message.getBody();
-				holder.getDescTextView().setText(textBody.getMessage());
-				holder.getDescTextView().setMovementMethod(LinkMovementMethod.getInstance());
-				ViewHolderTag holderTag = ViewHolderTag.createTag(message,
-						ViewHolderTag.TagType.TAG_IM_TEXT, position);
-				View.OnClickListener onClickListener = ((ChattingActivity) context).mChattingFragment.getChattingAdapter().getOnClickListener();
-				holder.getDescTextView().setTag(holderTag);
-				holder.getDescTextView().setOnClickListener(onClickListener);
-//				setAutoLinkForTextView(holder.getDescTextView());
-			}else if(message.getType()== ECMessage.Type.CALL){
-				ECCallMessageBody textBody = (ECCallMessageBody) message.getBody();
-				holder.getDescTextView().setText(textBody.getCallText());
-				holder.getDescTextView().setMovementMethod(LinkMovementMethod.getInstance());
+					} catch (JSONException e) {
+						e.printStackTrace();
+					}
+					if (TextUtils.equals(msgType, CCPChattingFooter2.FACETYPE)) {
+						holder.getDescTextView().setBackgroundResource(0);
+					} else {
+						holder.getDescTextView().setBackgroundResource(R.drawable.chat_from_bg_normal);
+					}
+					ECTextMessageBody textBody = (ECTextMessageBody) message.getBody();
+					String msgTextString =textBody.getMessage();
+					holder.getDescTextView().showMessage(message.getId() + "", msgTextString, msgType, jsonArray);
+					holder.getDescTextView().setMovementMethod(LinkMovementMethod.getInstance());
+					View.OnClickListener onClickListener = ((ChattingActivity) context).mChattingFragment.getChattingAdapter().getOnClickListener();
+					ViewHolderTag holderTag = ViewHolderTag.createTag(message,
+							ViewHolderTag.TagType.TAG_IM_TEXT, position);
+					holder.getDescTextView().setTag(holderTag);
+					holder.getDescTextView().setOnClickListener(onClickListener);
+				} else if (message.getType() == ECMessage.Type.CALL) {
+					ECCallMessageBody textBody = (ECCallMessageBody) message.getBody();
+					holder.getDescTextView().setText(textBody.getCallText());
+					holder.getDescTextView().setMovementMethod(LinkMovementMethod.getInstance());
+				}
 			}
-		}
+
 	}
 
 	@Override

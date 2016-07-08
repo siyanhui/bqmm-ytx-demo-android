@@ -11,15 +11,13 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */package com.yuntongxun.ecdemo;
 
-import java.io.File;
-
-import java.io.InvalidClassException;
-
 import android.app.Application;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.os.Bundle;
 
 import com.baidu.mapapi.SDKInitializer;
+import com.melink.bqmmsdk.sdk.BQMM;
 import com.nostra13.universalimageloader.cache.disc.impl.UnlimitedDiscCache;
 import com.nostra13.universalimageloader.cache.memory.impl.WeakMemoryCache;
 import com.nostra13.universalimageloader.core.DisplayImageOptions;
@@ -27,13 +25,16 @@ import com.nostra13.universalimageloader.core.ImageLoader;
 import com.nostra13.universalimageloader.core.ImageLoaderConfiguration;
 import com.nostra13.universalimageloader.core.assist.QueueProcessingType;
 import com.nostra13.universalimageloader.utils.StorageUtils;
+import com.tencent.bugly.crashreport.CrashReport;
 import com.yuntongxun.ecdemo.common.CCPAppManager;
 import com.yuntongxun.ecdemo.common.utils.CrashHandler;
 import com.yuntongxun.ecdemo.common.utils.ECPreferenceSettings;
 import com.yuntongxun.ecdemo.common.utils.ECPreferences;
 import com.yuntongxun.ecdemo.common.utils.FileAccessor;
 import com.yuntongxun.ecdemo.common.utils.LogUtil;
-import com.yuntongxun.ecdemo.storage.ServerConfigSqlManager;
+
+import java.io.File;
+import java.io.InvalidClassException;
 
 /**
  * Created by Jorstin on 2015/3/17.
@@ -63,7 +64,17 @@ public class ECApplication extends Application {
         initImageLoader();
         CrashHandler.getInstance().init(this);
         SDKInitializer.initialize(instance);
-
+        /**
+         * BQMM集成
+         * 首先从AndroidManifest.xml中取得appId和appSecret，然后对BQMM SDK进行初始化
+         */
+        try {
+            Bundle bundle = getPackageManager().getApplicationInfo(getPackageName(), PackageManager.GET_META_DATA).metaData;
+            BQMM.getInstance().initConfig(this, bundle.getString("bqmm_app_id"), bundle.getString("bqmm_app_secret"));
+        } catch (PackageManager.NameNotFoundException e) {
+            e.printStackTrace();
+        }
+        CrashReport.initCrashReport(getApplicationContext());
 
     }
 

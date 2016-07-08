@@ -28,7 +28,7 @@
             style="@style/ChattingUISenderText"
             android:visibility="gone" />
 
-        <com.yuntongxun.ecdemo.ui.chatting.base.EmojiconTextView
+        <com.melink.bqmmsdk.widget.BQMMMessageText
             android:id="@+id/chatting_content_itv"
             style="@style/ChattingUIText"
             android:background="@drawable/chatfrom_bg"

@@ -13,19 +13,24 @@
 package com.yuntongxun.ecdemo.ui.chatting.model;
 
 import android.content.Context;
+import android.text.TextUtils;
 import android.text.method.LinkMovementMethod;
 import android.view.ContextMenu;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.view.View.OnClickListener;
 
 import com.yuntongxun.ecdemo.R;
 import com.yuntongxun.ecdemo.ui.chatting.ChattingActivity;
 import com.yuntongxun.ecdemo.ui.chatting.holder.BaseHolder;
 import com.yuntongxun.ecdemo.ui.chatting.holder.DescriptionViewHolder;
+import com.yuntongxun.ecdemo.ui.chatting.view.CCPChattingFooter2;
 import com.yuntongxun.ecdemo.ui.chatting.view.ChattingItemContainer;
 import com.yuntongxun.ecsdk.ECMessage;
 import com.yuntongxun.ecsdk.im.ECTextMessageBody;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 
 /**
@@ -60,20 +65,36 @@ public class DescriptionTxRow extends BaseChattingRow{
 	public void buildChattingData(Context context, BaseHolder baseHolder,
 			ECMessage msg, int position) {
 		DescriptionViewHolder holder = (DescriptionViewHolder) baseHolder;
-		if(msg != null) {
-			ECTextMessageBody textBody = (ECTextMessageBody) msg.getBody();
-			ViewHolderTag holderTag = ViewHolderTag.createTag(msg,
-					ViewHolderTag.TagType.TAG_IM_TEXT, position);
-			holder.getDescTextView().setText(textBody.getMessage());
-			holder.getDescTextView().setMovementMethod(LinkMovementMethod.getInstance());
-			OnClickListener onClickListener = ((ChattingActivity) context).mChattingFragment.getChattingAdapter().getOnClickListener();
-			getMsgStateResId(position, holder, msg, onClickListener);
+        if (msg != null) {
+            String msgType = "";
+            JSONArray jsonArray = null;
+            if (!TextUtils.isEmpty(msg.getUserData())) try {
+                JSONObject jsonObject = new JSONObject(msg.getUserData());
+                msgType = jsonObject.getString(CCPChattingFooter2.TXT_MSGTYPE);
+                jsonArray = jsonObject.getJSONArray(CCPChattingFooter2.MSG_DATA);
 
-			holder.getDescTextView().setTag(holderTag);
-			holder.getDescTextView().setOnClickListener(onClickListener);
-//			setAutoLinkForTextView(holder.getDescTextView());
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+            if (TextUtils.equals(msgType, CCPChattingFooter2.FACETYPE)) {
+                holder.getDescTextView().setBackgroundResource(0);
+            } else {
+                holder.getDescTextView().setBackgroundResource(R.drawable.chat_to_bg_normal);
+            }
+            ECTextMessageBody textBody = (ECTextMessageBody) msg.getBody();
+            String msgTextString = textBody.getMessage();
 
-		}
+            holder.getDescTextView().showMessage(msg.getId() + "", msgTextString, msgType, jsonArray);
+            holder.getDescTextView().setMovementMethod(LinkMovementMethod.getInstance());
+            View.OnClickListener onClickListener = ((ChattingActivity) context).mChattingFragment.getChattingAdapter().getOnClickListener();
+            ViewHolderTag holderTag = ViewHolderTag.createTag(msg,
+                    ViewHolderTag.TagType.TAG_IM_TEXT, position);
+            holder.getDescTextView().setTag(holderTag);
+            holder.getDescTextView().setOnClickListener(onClickListener);
+            setAutoLinkForTextView(holder.getDescTextView());
+            getMsgStateResId(position, holder, msg, onClickListener);
+        }
+
 	}
 
 

@@ -16,7 +16,6 @@ import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.Color;
 import android.graphics.drawable.AnimationDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
@@ -24,13 +23,11 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 import android.os.StatFs;
-import android.os.SystemClock;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
-import android.util.Log;
 import android.view.Display;
 import android.view.Gravity;
 import android.view.KeyEvent;
@@ -38,13 +35,11 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
-import android.view.animation.AnimationUtils;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.BaseAdapter;
-import android.widget.Button;
 import android.widget.Chronometer;
 import android.widget.EditText;
 import android.widget.FrameLayout;
@@ -54,24 +49,36 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import com.melink.baseframe.utils.DensityUtils;
+import com.melink.bqmmsdk.bean.Emoji;
+import com.melink.bqmmsdk.sdk.BQMM;
+import com.melink.bqmmsdk.sdk.BQMMMessageHelper;
+import com.melink.bqmmsdk.sdk.IBqmmSendMessageListener;
+import com.melink.bqmmsdk.ui.keyboard.BQMMKeyboard;
+import com.melink.bqmmsdk.ui.keyboard.IBQMMUnicodeEmojiProvider;
+import com.melink.bqmmsdk.widget.BQMMEditView;
+import com.melink.bqmmsdk.widget.BQMMSendButton;
 import com.yuntongxun.ecdemo.R;
 import com.yuntongxun.ecdemo.common.CCPAppManager;
 import com.yuntongxun.ecdemo.common.base.CCPEditText;
 import com.yuntongxun.ecdemo.common.utils.DensityUtil;
 import com.yuntongxun.ecdemo.common.utils.ECPreferenceSettings;
 import com.yuntongxun.ecdemo.common.utils.ECPreferences;
+import com.yuntongxun.ecdemo.common.utils.EmoticonUtil;
 import com.yuntongxun.ecdemo.common.utils.FileAccessor;
 import com.yuntongxun.ecdemo.common.utils.LogUtil;
 import com.yuntongxun.ecdemo.common.utils.ResourceHelper;
 import com.yuntongxun.ecdemo.common.utils.ToastUtil;
 import com.yuntongxun.ecdemo.ui.chatting.IMChattingHelper;
-import com.yuntongxun.ecdemo.ui.chatting.base.EmojiconEditText;
+import com.yuntongxun.ecdemo.ui.chatting.base.UnicodeToEmoji;
 import com.yuntongxun.ecdemo.ui.contact.ECContacts;
-import com.yuntongxun.ecsdk.ECDevice;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 
 
@@ -82,6 +89,24 @@ import java.util.List;
  */
 public class CCPChattingFooter2 extends LinearLayout {
 
+    /**
+     * 两种表情消息类型，前者为图文混排表情，后者为大表情
+     */
+    public static final String EMOJITYPE = "emojitype";
+    public static final String FACETYPE = "facetype";
+
+    /**
+     * 用于在消息的附加信息里表示表情文字
+     */
+    public static final String EMOJI_TEXT="emoji_text";
+    /**
+     * 用于在消息的附加信息里表示类型
+     */
+    public static final String TXT_MSGTYPE="txt_msgType";
+    /**
+     * 用于在消息的附加信息里表示信息的实际内容
+     */
+    public static final String MSG_DATA="msg_data";
 
     private static final String TAG = LogUtil.getLogUtilsTag(CCPChattingFooter2.class);
     private static final int WHAT_ON_DIMISS_DIALOG = 0x1;
@@ -135,10 +160,13 @@ public class CCPChattingFooter2 extends LinearLayout {
 
     private ImageButton mVoiceRecord;
 
-    private Button mChattingSend;
+    private BQMMSendButton mChattingSend;
 
-    public EmojiconEditText mEditText;
+    public BQMMEditView mEditText;
 
+    private BQMM bqmmsdk;
+
+    private BQMMKeyboard bqmmKeyboard;
     /**
      * Cloud communication panel, display all support ability
      */
@@ -510,11 +538,11 @@ public class CCPChattingFooter2 extends LinearLayout {
                 if(mAppPanel == null) {
                     initAppPanel();
                 }
-                mAppPanel.initFlipperRotateMe();
-
-                if(mChatFooterPanel != null) {
-                    mChatFooterPanel.setVisibility(View.GONE);
+                if(bqmmKeyboard.getVisibility() == View.VISIBLE) {
+                    bqmmKeyboard.setVisibility(View.GONE);
+                    bqmmKeyboard.hideKeyboard();
                 }
+                mAppPanel.initFlipperRotateMe();
                 mAppPanel.setVisibility(View.VISIBLE);
                 requestFocusEditText(false);
                 if (mChattingMode == CHATTING_MODE_VOICE) {
@@ -525,11 +553,13 @@ public class CCPChattingFooter2 extends LinearLayout {
                 //mAppPanel.refreshAppPanel();
             } else {
                 //setMode(CHATTING_MODE_VOICE, 22, true);
-                if(mChatFooterPanel.getVisibility() == View.VISIBLE) {
-                    mChatFooterPanel.setVisibility(View.GONE);
+                if(bqmmKeyboard.getVisibility() == View.VISIBLE) {
+                    bqmmKeyboard.setVisibility(View.GONE);
+                    bqmmKeyboard.hideKeyboard();
                     mAppPanel.setVisibility(View.VISIBLE);
                     setMode(0, 22, false);
-                } else {
+                }
+                else {
                     hideChatFooterPanel();
                     requestFocusEditText(true);
                     mInputMethodManager.showSoftInput(mEditText, 0);
@@ -596,22 +626,6 @@ public class CCPChattingFooter2 extends LinearLayout {
 
     };
 
-    final private EmojiGrid.OnEmojiItemClickListener mEmojiItemClickListener
-            = new EmojiGrid.OnEmojiItemClickListener() {
-
-        @Override
-        public void onEmojiItemClick(int emojiid, String emojiName) {
-            input(mEditText, emojiName);
-        }
-
-        @Override
-        public void onEmojiDelClick() {
-            mEditText.getInputConnection().sendKeyEvent(
-                    new KeyEvent(MotionEvent.ACTION_DOWN, KeyEvent.KEYCODE_DEL));
-            mEditText.getInputConnection().sendKeyEvent(
-                    new KeyEvent(MotionEvent.ACTION_UP, KeyEvent.KEYCODE_DEL));
-        }
-    };
 
     /**
      * @param context
@@ -666,16 +680,17 @@ public class CCPChattingFooter2 extends LinearLayout {
     /**
      *
      */
-    private void initChatFooter(Context context) {
+    private void initChatFooter(final Context context) {
         long currentTimeMillis = System.currentTimeMillis();
         mChattingFooterView = inflate(context, R.layout.ccp_chatting_footer2, this);
-        mEditText = ((EmojiconEditText) findViewById(R.id.chatting_content_et));
+        mEditText = ((BQMMEditView) findViewById(R.id.chatting_content_et));
         mEditText.setOnFocusChangeListener(onFocusChangeListener);
         mTextPanel = ((LinearLayout) findViewById(R.id.text_panel_ll));
         mChattingBottomPanel = ((FrameLayout)findViewById(R.id.chatting_bottom_panel));
         mChattingAttach = ((ImageButton) findViewById(R.id.chatting_attach_btn));
-        mChattingSend = ((Button) findViewById(R.id.chatting_send_btn));
+        mChattingSend = ((BQMMSendButton) findViewById(R.id.chatting_send_btn));
         mChattingModeButton = ((ImageButton) findViewById(R.id.chatting_mode_btn));
+        bqmmKeyboard = (BQMMKeyboard) findViewById(R.id.chat_msg_input_box);
         mInsertSomeone = new InsertSomeone();
         mAtSomeone = new ArrayList<ECContacts>();
         enableChattingSend(false);
@@ -733,6 +748,105 @@ public class CCPChattingFooter2 extends LinearLayout {
 
         setBottomPanelHeight(LayoutParams.MATCH_PARENT);
 
+        /**
+         * BQMM集成
+         * 加载SDK
+         */
+        bqmmsdk = BQMM.getInstance();
+        // 初始化表情MM键盘，需要传入关联的EditView,SendBtn
+        bqmmsdk.setEditView(mEditText);
+        bqmmsdk.setKeyboard(bqmmKeyboard);
+        bqmmsdk.setSendButton(mChattingSend);
+        UnicodeToEmoji.initPhotos(context);
+        EmoticonUtil.initEmoji();
+        bqmmsdk.setUnicodeEmojiProvider(new IBQMMUnicodeEmojiProvider() {
+            @Override
+            public Drawable getDrawableFromCodePoint(int i) {
+                return UnicodeToEmoji.EmojiImageSpan.getEmojiDrawable(i);
+            }
+        });
+        bqmmsdk.load();
+        /**
+         * BQMM集成
+         * 实现输入联想
+         */
+        mEditText.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                BQMM.getInstance().startShortcutPopupWindowByoffset(context, s.toString(),mBiaoqing ,0, DensityUtils.dip2px(context,4));
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+            }
+        });
+
+
+        /**
+         * BQMM集成
+         * 设置发送消息的回调
+         */
+        bqmmsdk.setBqmmSendMsgListener(new IBqmmSendMessageListener() {
+            /**
+             * 单个大表情消息
+             */
+            @Override
+            public void onSendFace(final Emoji face) {
+                JSONArray msgCodes = BQMMMessageHelper.getFaceMessageData(face);
+                JSONObject jsonObject = new JSONObject();
+                try {
+                    jsonObject.put(TXT_MSGTYPE, FACETYPE);
+                    jsonObject.put(MSG_DATA, msgCodes);
+                    jsonObject.put(EMOJI_TEXT,"["+face.getEmoText()+"]");
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+                mChattingFooterLinstener.OnSendTextMessageRequest(jsonObject.toString());
+            }
+
+            /**
+             * 图文混排消息
+             */
+            @Override
+            public void onSendMixedMessage(List<Object> emojis, boolean isMixedMessage) {
+                if (TextUtils.isEmpty(mEditText.getText().toString().trim())) {
+                    mEditText.getText().clear();
+                    mEditText.setText("");
+                    return;
+                }
+                String msgString = BQMMMessageHelper.getMixedMessageString(emojis);
+                //判断一下是纯文本还是富文本
+                if (isMixedMessage) {
+                    StringBuilder sb=new StringBuilder();
+                    for(int i=0;i<emojis.size();i++){
+
+                        if (emojis.get(i).getClass().equals(Emoji.class)) {
+                            Emoji item = (Emoji) emojis.get(i);
+                            String tempText = "[" + item.getEmoText() + "]";
+                            sb.append(tempText);
+                        } else {
+                            sb.append(emojis.get(i).toString());
+                        }
+                    }
+                    JSONArray msgCodes = BQMMMessageHelper.getMixedMessageData(emojis);
+                    JSONObject jsonObject = new JSONObject();
+                    try {
+                        jsonObject.put(TXT_MSGTYPE, EMOJITYPE);
+                        jsonObject.put(MSG_DATA, msgCodes);
+                        jsonObject.put(EMOJI_TEXT,sb);
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                    mChattingFooterLinstener.OnSendTextMessageRequest(jsonObject.toString());
+                } else {
+                    mChattingFooterLinstener.OnSendTextMessageRequest(msgString);
+                }
+            }
+        });
         LogUtil.i(TAG, "init time:" + (System.currentTimeMillis() - currentTimeMillis));
     }
     
@@ -849,11 +963,10 @@ public class CCPChattingFooter2 extends LinearLayout {
     public final void displaySmileyPanel() {
         mChattingMode = CHATTING_MODE_KEYBORD;
         mTextPanel.setVisibility(View.VISIBLE);
-
-        if(mChatFooterPanel != null) {
-            mChatFooterPanel.reset();
-        }
-
+        bqmmKeyboard.setVisibility(VISIBLE);
+        bqmmKeyboard.showKeyboard();
+        hideInputMethod();
+        mChattingBottomPanel.setVisibility(GONE);
         setMode(CHATTING_MODE_VOICE, 21, true);
     }
 
@@ -873,10 +986,6 @@ public class CCPChattingFooter2 extends LinearLayout {
         if(TextUtils.isEmpty(tab)){
             return;
         }
-
-        if(mChatFooterPanel == null) {
-            initChattingFooterPanel();
-        }
     }
 
     public void hideSoftInputFromWindow(View view) {
@@ -892,34 +1001,7 @@ public class CCPChattingFooter2 extends LinearLayout {
         }
     }
 
-    /**
-     * init {@link ChatFooterPanel} if not null.
-     */
-    private void initChattingFooterPanel() {
-        if(mChatFooterPanel == null) {
-            if(CCPAppManager.getChatFooterPanel(getContext()) == null) {
-                mChatFooterPanel = new SmileyPanel(getContext(), null);
-            } else {
-                mChatFooterPanel = CCPAppManager.getChatFooterPanel(getContext());
-            }
-        }
-        mChatFooterPanel.setOnEmojiItemClickListener(mEmojiItemClickListener);
-        if(mChatFooterPanel != null) {
-            mChatFooterPanel.setVisibility(View.GONE);
-        }
 
-        if(mChattingBottomPanel != null) {
-            mChattingBottomPanel.addView(mChatFooterPanel,
-                    FrameLayout.LayoutParams.MATCH_PARENT,
-                    FrameLayout.LayoutParams.WRAP_CONTENT);
-        }
-
-        if(mEditText.getText().length() <= 0){
-            return;
-        }
-
-
-    }
 
     /**
      * Hide {@link ChatFooterPanel} if not null.
@@ -927,10 +1009,7 @@ public class CCPChattingFooter2 extends LinearLayout {
     private void hideChatFooterPanel() {
         mChattingBottomPanel.setVisibility(View.GONE);
         mAppPanel.setVisibility(View.GONE);
-        if (mChatFooterPanel != null) {
-            mChatFooterPanel.setVisibility(View.GONE);
-        }
-
+        bqmmKeyboard.setVisibility(GONE);
         setBiaoqingEnabled(false);
     }
 
@@ -1407,10 +1486,7 @@ public class CCPChattingFooter2 extends LinearLayout {
                             initAppPanel();
                         }
                         mAppPanel.initFlipperRotateMe();
-
-                        if(mChatFooterPanel != null) {
-                            mChatFooterPanel.setVisibility(View.GONE);
-                        }
+                        bqmmKeyboard.setVisibility(GONE);
                         mAppPanel.setVisibility(View.VISIBLE);
                         requestFocusEditText(false);
                         if (mChattingMode == CHATTING_MODE_VOICE) {
@@ -1420,18 +1496,11 @@ public class CCPChattingFooter2 extends LinearLayout {
                         if (mAppPanel != null){
                             mAppPanel.setVisibility(View.GONE);
                         }
-                        if (mChatFooterPanel == null) {
-                            initChattingFooterPanel();
-                        }
-                        mChatFooterPanel.onResume();
-                        if (mChatFooterPanel != null) {
-                            mChatFooterPanel.setVisibility(View.VISIBLE);
-                        }
+                        bqmmKeyboard.setVisibility(VISIBLE);
+                        bqmmKeyboard.showKeyboard();
                         setBiaoqingEnabled(true);
                         requestFocusEditText(true);
-
                         hideInputMethod();
-                        this.mChattingBottomPanel.setVisibility(View.VISIBLE);
                     }
 
                     break;
@@ -1469,24 +1538,16 @@ public class CCPChattingFooter2 extends LinearLayout {
      *
      */
     public final void onPause(){
-        if(mChatFooterPanel != null) {
-            mChatFooterPanel.onPause();
-        }
 
         mChattingFooterLinstener.onPause();
     }
 
     public void onDestory() {
         mAppPanel = null;
-        if(mChatFooterPanel != null) {
-            mChatFooterPanel.onDestroy();
-            mChatFooterPanel = null;
-        }
         if(mHandler != null) {
             mHandler.removeCallbacksAndMessages(null);
         }
         if(mEditText != null) {
-            mEditText.miInputConnection = null;
             mEditText.setOnEditorActionListener(null);
             mEditText.setOnTouchListener(null);
             mEditText.removeTextChangedListener(null);
@@ -1618,7 +1679,7 @@ public class CCPChattingFooter2 extends LinearLayout {
             return ;
         }
         mSetAtSomeone = true;
-        EmojiconEditText editText = this.mEditText;
+        BQMMEditView editText = this.mEditText;
         editText.setText(text);
         mSetAtSomeone = false;
         if ((selecton < 0) || (selecton > this.mEditText.getText().length())) {

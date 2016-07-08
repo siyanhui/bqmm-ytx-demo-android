@@ -30,7 +30,6 @@ import android.text.Editable;
 import android.text.SpannableString;
 import android.text.TextUtils;
 import android.text.TextWatcher;
-import android.util.Log;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -43,6 +42,7 @@ import android.widget.AdapterView;
 import android.widget.ListView;
 import android.widget.Toast;
 
+import com.melink.bqmmsdk.sdk.BQMMMessageHelper;
 import com.yuntongxun.ecdemo.R;
 import com.yuntongxun.ecdemo.common.CCPAppManager;
 import com.yuntongxun.ecdemo.common.dialog.ECAlertDialog;
@@ -101,6 +101,10 @@ import com.yuntongxun.ecsdk.im.ECUserStateMessageBody;
 import com.yuntongxun.ecsdk.im.ECVideoMessageBody;
 import com.yuntongxun.ecsdk.im.ECVoiceMessageBody;
 import com.yuntongxun.ecsdk.platformtools.ECHandlerHelper;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.File;
 import java.io.InvalidClassException;
@@ -912,9 +916,31 @@ public class ChattingFragment extends CCPFragment implements
         ECMessage msg = ECMessage.createECMessage(ECMessage.Type.TXT);
         // 设置消息接收者
         msg.setTo(mRecipients);
-        // 创建一个文本消息体，并添加到消息对象中
-        ECTextMessageBody msgBody = new ECTextMessageBody(text.toString());
-		msg.setBody(msgBody);
+		ECTextMessageBody msgBody=null;
+		Boolean isBQMMMessage=false;
+		String emojiNames = null;
+		if(text.toString().contains(CCPChattingFooter2.TXT_MSGTYPE)  && text.toString().contains(CCPChattingFooter2.MSG_DATA)){
+			try {
+				JSONObject jsonObject = new JSONObject(text.toString());
+				String emojiType=jsonObject.getString(CCPChattingFooter2.TXT_MSGTYPE);
+				if(emojiType.equals(CCPChattingFooter2.EMOJITYPE) || emojiType.equals(CCPChattingFooter2.FACETYPE)){//说明是含有BQMM的表情
+					isBQMMMessage=true;
+					emojiNames=jsonObject.getString(CCPChattingFooter2.EMOJI_TEXT);
+				}
+			} catch (JSONException e) {
+				e.printStackTrace();
+			}
+		}
+		if (isBQMMMessage) {
+			msgBody = new ECTextMessageBody(emojiNames);
+			msg.setBody(msgBody);
+			msg.setUserData(text.toString());
+		} else {
+			// 创建一个文本消息体，并添加到消息对象中
+			msgBody = new ECTextMessageBody(text.toString());
+			msg.setBody(msgBody);
+		}
+
 		String[] at = mChattingFooter.getAtSomeBody();
 		msgBody.setAtMembers(at);
 		mChattingFooter.clearSomeBody();
@@ -2240,12 +2266,26 @@ public class ChattingFragment extends CCPFragment implements
                     break;
                 case 1: // 复制
                     try {
-                        if(msg.getType() == ECMessage.Type.TXT) {
-                            ECTextMessageBody body = (ECTextMessageBody) msg.getBody();
-                            ClipboardUtils.copyFromEdit(getActivity(), getString(R.string.app_pic), body.getMessage());
-                            ToastUtil.showMessage(R.string.app_copy_ok);
-                        }
-                    } catch (Exception e) {
+						if (msg.getType() == ECMessage.Type.TXT) {
+							ECTextMessageBody body = (ECTextMessageBody) msg.getBody();
+							String msgType = "";
+							JSONArray jsonArray = null;
+							if (!TextUtils.isEmpty(msg.getUserData())) try {
+								JSONObject jsonObject = new JSONObject(msg.getUserData());
+								msgType = jsonObject.getString(CCPChattingFooter2.TXT_MSGTYPE);
+								jsonArray = jsonObject.getJSONArray(CCPChattingFooter2.MSG_DATA);
+
+							} catch (JSONException e) {
+								e.printStackTrace();
+							}
+							if (TextUtils.equals(msgType, CCPChattingFooter2.EMOJITYPE)) {
+								ClipboardUtils.copyFromEdit(getActivity(), getString(R.string.app_pic), BQMMMessageHelper.getMsgCodeString(jsonArray));
+							} else {
+								ClipboardUtils.copyFromEdit(getActivity(), getString(R.string.app_pic), body.getMessage());
+							}
+							ToastUtil.showMessage(R.string.app_copy_ok);
+						}
+					} catch (Exception e) {
                         LogUtil.e(TAG, "clip.setText error ");
                     }
                     break;

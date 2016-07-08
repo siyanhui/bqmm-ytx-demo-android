@@ -18,9 +18,10 @@ import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import com.melink.baseframe.utils.DensityUtils;
+import com.melink.bqmmsdk.widget.BQMMMessageText;
 import com.yuntongxun.ecdemo.R;
 import com.yuntongxun.ecdemo.common.base.CCPTextView;
-import com.yuntongxun.ecdemo.ui.chatting.base.EmojiconTextView;
 
 
 /**
@@ -34,7 +35,7 @@ public class DescriptionViewHolder extends BaseHolder{
 	/**
 	 * TextView that display IMessage description.
 	 */
-	private EmojiconTextView descTextView;
+	private BQMMMessageText descTextView;
 	
 	/**
 	 * @param type
@@ -49,7 +50,9 @@ public class DescriptionViewHolder extends BaseHolder{
 
 		chattingTime = (TextView) baseView.findViewById(R.id.chatting_time_tv);
 		chattingUser = (TextView) baseView.findViewById(R.id.chatting_user_tv);
-		descTextView = (EmojiconTextView) baseView.findViewById(R.id.chatting_content_itv);
+		descTextView = (BQMMMessageText) baseView.findViewById(R.id.chatting_content_itv);
+		descTextView.setSmallEmojiShowSize(DensityUtils.dip2px(baseView.getContext(), 20));
+		descTextView.setBigEmojiShowSize(DensityUtils.dip2px(baseView.getContext(), 100));
 		checkBox = (CheckBox) baseView.findViewById(R.id.chatting_checkbox);
 		chattingMaskView = baseView.findViewById(R.id.chatting_maskview);
 		chattingContent = baseView.findViewById(R.id.chatting_content_area);
@@ -68,9 +71,9 @@ public class DescriptionViewHolder extends BaseHolder{
 	 * {@link CCPTextView} Display imessage text 
 	 * @return
 	 */
-	public EmojiconTextView getDescTextView() {
+	public BQMMMessageText getDescTextView() {
 		if(descTextView == null) {
-			descTextView = (EmojiconTextView) getBaseView().findViewById(R.id.chatting_content_itv);
+			descTextView = (BQMMMessageText) getBaseView().findViewById(R.id.chatting_content_itv);
 		}
 		return descTextView;
 	}

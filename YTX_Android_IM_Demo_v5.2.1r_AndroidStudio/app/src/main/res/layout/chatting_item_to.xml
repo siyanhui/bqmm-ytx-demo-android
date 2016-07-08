@@ -49,7 +49,7 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_vertical"/>
 
-            <com.yuntongxun.ecdemo.ui.chatting.base.EmojiconTextView
+            <com.melink.bqmmsdk.widget.BQMMMessageText
                 android:id="@+id/chatting_content_itv"
                 style="@style/ChattingUIText"
                 android:layout_width="wrap_content"

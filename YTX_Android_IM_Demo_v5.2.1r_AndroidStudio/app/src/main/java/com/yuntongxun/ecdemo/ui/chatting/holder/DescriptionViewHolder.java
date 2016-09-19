@@ -51,8 +51,8 @@ public class DescriptionViewHolder extends BaseHolder{
 		chattingTime = (TextView) baseView.findViewById(R.id.chatting_time_tv);
 		chattingUser = (TextView) baseView.findViewById(R.id.chatting_user_tv);
 		descTextView = (BQMMMessageText) baseView.findViewById(R.id.chatting_content_itv);
-		descTextView.setSmallEmojiShowSize(DensityUtils.dip2px(baseView.getContext(), 20));
-		descTextView.setBigEmojiShowSize(DensityUtils.dip2px(baseView.getContext(), 100));
+		descTextView.setEmojiSize(DensityUtils.dip2px(20));
+		descTextView.setStickerSize(DensityUtils.dip2px(100));
 		checkBox = (CheckBox) baseView.findViewById(R.id.chatting_checkbox);
 		chattingMaskView = baseView.findViewById(R.id.chatting_maskview);
 		chattingContent = baseView.findViewById(R.id.chatting_content_area);

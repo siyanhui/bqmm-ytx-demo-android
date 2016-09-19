@@ -777,7 +777,7 @@ public class CCPChattingFooter2 extends LinearLayout {
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                BQMM.getInstance().startShortcutPopupWindowByoffset(context, s.toString(),mBiaoqing ,0, DensityUtils.dip2px(context,4));
+                BQMM.getInstance().startShortcutPopupWindowByoffset(context, s.toString(),mBiaoqing ,0, DensityUtils.dip2px(4));
             }
 
             @Override

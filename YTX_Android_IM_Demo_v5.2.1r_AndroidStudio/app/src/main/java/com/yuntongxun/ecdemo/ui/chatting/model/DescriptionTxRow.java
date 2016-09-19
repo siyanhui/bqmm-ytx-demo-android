@@ -84,7 +84,7 @@ public class DescriptionTxRow extends BaseChattingRow{
             ECTextMessageBody textBody = (ECTextMessageBody) msg.getBody();
             String msgTextString = textBody.getMessage();
 
-            holder.getDescTextView().showMessage(msg.getId() + "", msgTextString, msgType, jsonArray);
+            holder.getDescTextView().showMessage(msgTextString, msgType, jsonArray);
             holder.getDescTextView().setMovementMethod(LinkMovementMethod.getInstance());
             View.OnClickListener onClickListener = ((ChattingActivity) context).mChattingFragment.getChattingAdapter().getOnClickListener();
             ViewHolderTag holderTag = ViewHolderTag.createTag(msg,

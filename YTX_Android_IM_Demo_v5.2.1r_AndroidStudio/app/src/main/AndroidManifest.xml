@@ -518,7 +518,7 @@
             android:value="03f4416f2f"/>
         <meta-data
             android:name="BUGLY_APP_VERSION"
-            android:value="1.6.1"/>
+            android:value="1.7.12"/>
         <meta-data
             android:name="BUGLY_APP_CHANNEL"
             android:value="alpha"/>

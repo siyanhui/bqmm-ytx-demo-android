@@ -13,11 +13,11 @@ def bqmmAppSecret = properties.getProperty('bqmm.appSecret')
 apply plugin: 'com.android.application'
 android {
 
-    compileSdkVersion 21
-    buildToolsVersion "21.1.2"
+    compileSdkVersion 22
+    buildToolsVersion "26.0.2"
     defaultConfig {
         applicationId "com.yuntongxun.ecdemo"
-        minSdkVersion 10
+        minSdkVersion 11
         versionCode 17
         versionName "5.2.1r"
         sourceSets {
@@ -26,31 +26,31 @@ android {
                 java.srcDirs = ['src/main/java']
             }
         }
+        lintOptions {
+            abortOnError false
+        }
         /**
          * 以下代码可以把appID和appSecret写入AndroidManifest
          */
         manifestPlaceholders = [bqmmAppID: bqmmAppID, bqmmAppSecret: bqmmAppSecret]
         multiDexEnabled true
     }
-    dependencies {
-        compile fileTree(dir: 'libs', include: ['*.jar'])
-        compile 'com.android.support:appcompat-v7:20.0.0'
-        compile files('libs/umeng-analytics-v5.4.2.jar')
-        compile files('libs/pinyin4j-2.5.0.jar')
-        compile files('libs/universal-image-loader-1.9.3.jar')
-        compile files('libs/BaiduLBS_Android.jar')
-        compile files('libs/glide-3.6.1.jar')
-        compile files('libs/locSDK_6.13.jar')
-        compile files('libs/jsoup-1.7.1.jar')
-        compile files('libs/Yuntx_IMLib_v5.2.1r.jar')
-        compile 'com.tencent.bugly:crashreport:latest.release'
-
-    }
-
-
 }
 
 
 dependencies {
+    compile fileTree(dir: 'libs', include: ['*.jar'])
+    compile 'com.android.support:appcompat-v7:22.2.1'
+    compile files('libs/umeng-analytics-v5.4.2.jar')
+    compile files('libs/pinyin4j-2.5.0.jar')
+    compile files('libs/universal-image-loader-1.9.3.jar')
+    compile files('libs/BaiduLBS_Android.jar')
+    compile files('libs/glide-3.6.1.jar')
+    compile files('libs/locSDK_6.13.jar')
+    compile files('libs/jsoup-1.7.1.jar')
+    compile files('libs/Yuntx_IMLib_v5.2.1r.jar')
+    compile 'com.tencent.bugly:crashreport:latest.release'
+    compile 'com.android.support:recyclerview-v7:22.2.1'
     compile project(':BQMM_Lib')
+    testCompile 'junit:junit:4.12'
 }

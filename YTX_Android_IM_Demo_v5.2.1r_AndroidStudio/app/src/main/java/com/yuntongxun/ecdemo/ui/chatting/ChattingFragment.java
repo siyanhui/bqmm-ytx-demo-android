@@ -923,7 +923,7 @@ public class ChattingFragment extends CCPFragment implements
 			try {
 				JSONObject jsonObject = new JSONObject(text.toString());
 				String emojiType=jsonObject.getString(CCPChattingFooter2.TXT_MSGTYPE);
-				if(emojiType.equals(CCPChattingFooter2.EMOJITYPE) || emojiType.equals(CCPChattingFooter2.FACETYPE)){//说明是含有BQMM的表情
+				if(emojiType.equals(CCPChattingFooter2.EMOJITYPE) || emojiType.equals(CCPChattingFooter2.FACETYPE) || emojiType.equals(CCPChattingFooter2.WEBTYPE)){//说明是含有BQMM的表情
 					isBQMMMessage=true;
 					emojiNames=jsonObject.getString(CCPChattingFooter2.EMOJI_TEXT);
 				}

@@ -74,11 +74,15 @@ public class DescriptionRxRow extends BaseChattingRow {
 				if (message.getType() == ECMessage.Type.TXT) {
 					String msgType="";
 					JSONArray jsonArray=null;
+					JSONObject gifJsonObject = null;
 					if (!TextUtils.isEmpty(message.getUserData())) try {
 						JSONObject jsonObject = new JSONObject(message.getUserData());
 						msgType = jsonObject.getString(CCPChattingFooter2.TXT_MSGTYPE);
-						jsonArray = jsonObject.getJSONArray(CCPChattingFooter2.MSG_DATA);
-
+						if (TextUtils.equals(msgType,CCPChattingFooter2.WEBTYPE)){
+							gifJsonObject = jsonObject.getJSONObject(CCPChattingFooter2.MSG_DATA);
+						}else {
+							jsonArray = jsonObject.getJSONArray(CCPChattingFooter2.MSG_DATA);
+						}
 					} catch (JSONException e) {
 						e.printStackTrace();
 					}
@@ -89,7 +93,11 @@ public class DescriptionRxRow extends BaseChattingRow {
 					}
 					ECTextMessageBody textBody = (ECTextMessageBody) message.getBody();
 					String msgTextString =textBody.getMessage();
-					holder.getDescTextView().showMessage(msgTextString, msgType, jsonArray);
+					if (TextUtils.equals(msgType,CCPChattingFooter2.WEBTYPE)){
+						holder.getDescTextView().showBQMMGif(gifJsonObject.optString("data_id"), gifJsonObject.optString("sticker_url"), gifJsonObject.optInt("w"), gifJsonObject.optInt("h"), gifJsonObject.optInt("is_gif"));
+					}else {
+						holder.getDescTextView().showMessage(msgTextString, msgType, jsonArray);
+					}
 					holder.getDescTextView().setMovementMethod(LinkMovementMethod.getInstance());
 					View.OnClickListener onClickListener = ((ChattingActivity) context).mChattingFragment.getChattingAdapter().getOnClickListener();
 					ViewHolderTag holderTag = ViewHolderTag.createTag(message,

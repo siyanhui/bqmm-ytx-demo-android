@@ -50,15 +50,19 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import com.melink.baseframe.utils.DensityUtils;
+import com.melink.bqmmsdk.bean.BQMMGif;
 import com.melink.bqmmsdk.bean.Emoji;
 import com.melink.bqmmsdk.sdk.BQMM;
 import com.melink.bqmmsdk.sdk.BQMMMessageHelper;
 import com.melink.bqmmsdk.sdk.IBqmmSendMessageListener;
 import com.melink.bqmmsdk.ui.keyboard.BQMMKeyboard;
 import com.melink.bqmmsdk.ui.keyboard.IBQMMUnicodeEmojiProvider;
+import com.melink.bqmmsdk.ui.keyboard.IGifButtonClickListener;
 import com.melink.bqmmsdk.widget.BQMMEditView;
 import com.melink.bqmmsdk.widget.BQMMSendButton;
 import com.yuntongxun.ecdemo.R;
+import com.yuntongxun.ecdemo.bqmmgif.BQMMGifManager;
+import com.yuntongxun.ecdemo.bqmmgif.IBqmmSendGifListener;
 import com.yuntongxun.ecdemo.common.CCPAppManager;
 import com.yuntongxun.ecdemo.common.base.CCPEditText;
 import com.yuntongxun.ecdemo.common.utils.DensityUtil;
@@ -94,7 +98,10 @@ public class CCPChattingFooter2 extends LinearLayout {
      */
     public static final String EMOJITYPE = "emojitype";
     public static final String FACETYPE = "facetype";
-
+    /**
+     * BQMM SDK 2.0.0新增Gif类型
+     */
+    public static final String WEBTYPE = "webtype";
     /**
      * 用于在消息的附加信息里表示表情文字
      */
@@ -522,6 +529,7 @@ public class CCPChattingFooter2 extends LinearLayout {
 
         @Override
         public void onClick(View v) {
+            BQMMGifManager.getInstance(getContext()).updateSearchModeAndSearchUIWithStatus(BQMMGifManager.BQMM_SEARCH_MODE_STATUS_KEYBOARD_HIDE);
             displaySmileyPanel();
         }
     };
@@ -755,7 +763,20 @@ public class CCPChattingFooter2 extends LinearLayout {
         bqmmsdk = BQMM.getInstance();
         // 初始化表情MM键盘，需要传入关联的EditView,SendBtn
         bqmmsdk.setEditView(mEditText);
-        bqmmsdk.setKeyboard(bqmmKeyboard);
+        bqmmsdk.setKeyboard(bqmmKeyboard, new IGifButtonClickListener() {
+            @Override
+            public void didClickGifTab() {
+                bqmmKeyboard.setVisibility(GONE);
+                mEditText.requestFocus();
+                showKeyBoard(getContext());
+                new Handler().postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        BQMMGifManager.getInstance(getContext()).showTrending();
+                    }
+                },300);
+            }
+        });
         bqmmsdk.setSendButton(mChattingSend);
         UnicodeToEmoji.initPhotos(context);
         EmoticonUtil.initEmoji();
@@ -766,24 +787,7 @@ public class CCPChattingFooter2 extends LinearLayout {
             }
         });
         bqmmsdk.load();
-        /**
-         * BQMM集成
-         * 实现输入联想
-         */
-        mEditText.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                BQMM.getInstance().startShortcutPopupWindowByoffset(context, s.toString(),mBiaoqing ,0, DensityUtils.dip2px(4));
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-            }
-        });
+        BQMMGifManager.getInstance(getContext()).addEditViewListeners();
 
 
         /**
@@ -847,9 +851,38 @@ public class CCPChattingFooter2 extends LinearLayout {
                 }
             }
         });
+        BQMMGifManager.getInstance(getContext()).setBQMMSendGifListener(new IBqmmSendGifListener() {
+            @Override
+            public void onSendBQMMGif(BQMMGif bqmmGif) {
+                JSONObject gifJsonObject = new JSONObject();
+                try {
+                    gifJsonObject.put("data_id",bqmmGif.getSticker_id());
+                    gifJsonObject.put("h",bqmmGif.getSticker_height());
+                    gifJsonObject.put("w",bqmmGif.getSticker_width());
+                    gifJsonObject.put("sticker_url",bqmmGif.getSticker_url());
+                    gifJsonObject.put("is_gif",bqmmGif.getIs_gif());
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+
+
+                JSONObject jsonObject = new JSONObject();
+                try {
+                    jsonObject.put(TXT_MSGTYPE, WEBTYPE);
+                    jsonObject.put(MSG_DATA, gifJsonObject);
+                    jsonObject.put(EMOJI_TEXT,"["+bqmmGif.getText()+"]");
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+                mChattingFooterLinstener.OnSendTextMessageRequest(jsonObject.toString());
+            }
+        });
         LogUtil.i(TAG, "init time:" + (System.currentTimeMillis() - currentTimeMillis));
     }
-    
+    public void showKeyBoard(Context context){
+        InputMethodManager inputMethodManager = (InputMethodManager) context.getSystemService(Context.INPUT_METHOD_SERVICE);
+        inputMethodManager.toggleSoftInput(0,InputMethodManager.SHOW_FORCED);
+    }
     final OnItemClickListener onItemClickListener =new OnItemClickListener() {
 
 		@Override
